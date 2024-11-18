@@ -3,12 +3,14 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { UserAddressEntity } from './address.entity';
 
 @Entity(EntityNames.User)
-export class User {
+export class UserEntity {
   @PrimaryGeneratedColumn()
   id: number;
   @Column({ nullable: true })
@@ -25,8 +27,12 @@ export class User {
   score: number;
   @Column({ nullable: true })
   agentId: number;
-  @CreateDateColumn({ type: 'time with time zone' })
+  @CreateDateColumn()
   created_at: Date;
-  @UpdateDateColumn({ type: 'time with time zone' })
+  @UpdateDateColumn()
   updated_at: Date;
+  @OneToMany(() => UserAddressEntity, (address) => address.user, {
+    onDelete: 'CASCADE',
+  })
+  addressList: UserAddressEntity[];
 }
