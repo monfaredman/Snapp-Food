@@ -1,4 +1,5 @@
 import { EntityNames } from 'src/common/enum/entity-name.enum';
+import { SupplierEntity } from 'src/modules/supplier/entities/supplier.entity';
 import {
   Column,
   Entity,
@@ -18,11 +19,17 @@ export class CategoryEntity {
   @Column()
   image: string;
   @Column({ nullable: true })
+  imageKey: string;
+  @Column({ nullable: true })
   show: boolean;
+  @Column({ nullable: true })
+  parentId: number;
   @ManyToOne(() => CategoryEntity, (category) => category.children, {
     onDelete: 'CASCADE',
   })
   parent: CategoryEntity;
   @OneToMany(() => CategoryEntity, (category) => category.parent)
   children: CategoryEntity[];
+  @OneToMany(() => SupplierEntity, (supplier) => supplier.category)
+  suppliers: SupplierEntity[];
 }
