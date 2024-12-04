@@ -1,13 +1,59 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Put,
+  UseInterceptors,
+  UploadedFiles,
+} from '@nestjs/common';
 import { SupplierService } from './supplier.service';
-import { SupplierSignupDto } from './dto/supplier.dto';
+import {
+  SupplementaryInformationDto,
+  SupplierSignupDto,
+  UploadDocsDto,
+} from './dto/supplier.dto';
+import { CheckOtpDto, SendOtpDto } from '../auth/dto/otp.dto';
+import { ApiConsumes } from '@nestjs/swagger';
+import { FormType } from 'src/common/enum/form-type.enum';
+import { SupplierAuth } from 'src/common/decorators/auth.decorator';
+import { UploadFileFieldsS3 } from 'src/common/interceptors/upload-file.interceptor';
 
 @Controller('supplier')
 export class SupplierController {
   constructor(private readonly supplierService: SupplierService) {}
 
-  @Post()
-  signup(@Body() supplierSignupDto: SupplierSignupDto) {
-    return this.supplierService.signup(supplierSignupDto);
+  @Post('/send-otp')
+  @ApiConsumes(FormType.Urlencoded, FormType.Json)
+  sendOtp(@Body() otpDto: SendOtpDto) {
+    return this.supplierService.sendOtp(otpDto);
+  }
+
+  @Post('/signup')
+  signup(@Body() supplierDto: SupplierSignupDto) {
+    return this.supplierService.signup(supplierDto);
+  }
+
+  @Post('/check-otp')
+  checkOtp(@Body() SendOtpDto: CheckOtpDto) {
+    return this.supplierService.checkOtp(SendOtpDto);
+  }
+
+  @Post('/supplementary-information')
+  @SupplierAuth()
+  supplementaryInformation(@Body() infoDto: SupplementaryInformationDto) {
+    return this.supplierService.saveSupplementaryInformation(infoDto);
+  }
+
+  @Put('/upload-documents')
+  @ApiConsumes(FormType.Multipart)
+  @SupplierAuth()
+  @UseInterceptors(
+    UploadFileFieldsS3([
+      { name: 'acceptedDoc', maxCount: 1 },
+      { name: 'image', maxCount: 1 },
+    ]),
+  )
+  uploadDocument(@Body() infoDto: UploadDocsDto, @UploadedFiles() files: any) {
+    return this.supplierService.uploadDocuments(files);
   }
 }

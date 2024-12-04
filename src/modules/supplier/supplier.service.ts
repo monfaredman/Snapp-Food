@@ -2,22 +2,40 @@ import { CategoryService } from './../category/category.service';
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
+  Scope,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { SupplierSignupDto } from './dto/supplier.dto';
+import {
+  SupplementaryInformationDto,
+  SupplierSignupDto,
+} from './dto/supplier.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { SupplierEntity } from './entities/supplier.entity';
 import { Repository } from 'typeorm';
 import { randomInt } from 'crypto';
 import { SupplierOTPEntity } from './entities/otp.entity';
+import { JwtService } from '@nestjs/jwt';
+import { PayloadType } from '../auth/types/payload';
+import { CheckOtpDto, SendOtpDto } from '../auth/dto/otp.dto';
+import { SupplierStatus } from './enum/status.enum';
+import { REQUEST } from '@nestjs/core';
+import { Request } from 'express';
+import { DocumentType } from './type';
+import { S3Service } from '../s3/s3.service';
 
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class SupplierService {
   constructor(
     @InjectRepository(SupplierEntity)
     private supplierRepository: Repository<SupplierEntity>,
-    private supplierOTPRepository: Repository<SupplierOTPEntity>,
+    @InjectRepository(SupplierOTPEntity)
+    private supplierOtpRepository: Repository<SupplierOTPEntity>,
     private categoryService: CategoryService,
+    private jwtService: JwtService,
+    private s3Service: S3Service,
+    @Inject(REQUEST) private req: Request,
   ) {}
 
   async signup(supplierSignupDto: SupplierSignupDto) {
@@ -54,10 +72,44 @@ export class SupplierService {
     return { message: 'Supplier created successfully' };
   }
 
+  async checkOtp(otpDto: CheckOtpDto) {
+    const { code, mobile } = otpDto;
+    const now = new Date();
+    const supplier = await this.supplierRepository.findOne({
+      where: { phone: mobile },
+      relations: {
+        otp: true,
+      },
+    });
+    if (!supplier || !supplier?.otp)
+      throw new UnauthorizedException('Not Found Account');
+    const otp = supplier?.otp;
+    if (otp?.code !== code)
+      throw new UnauthorizedException('Otp code is incorrect');
+    if (otp.expires_in < now)
+      throw new UnauthorizedException('Otp Code is expired');
+    if (!supplier.mobile_verify) {
+      await this.supplierRepository.update(
+        { id: supplier.id },
+        {
+          mobile_verify: true,
+        },
+      );
+    }
+    const { accessToken, refreshToken } = this.makeTokens({
+      id: supplier.id,
+    });
+    return {
+      accessToken,
+      refreshToken,
+      message: 'You logged-in successfully',
+    };
+  }
+
   async createOtpForSupplier(supplier: SupplierEntity) {
     const expiresIn = new Date(new Date().getTime() + 1000 * 60 * 2);
     const code = randomInt(10000, 99999).toString();
-    let otp = await this.supplierOTPRepository.findOneBy({
+    let otp = await this.supplierOtpRepository.findOneBy({
       supplierId: supplier.id,
     });
     if (otp) {
@@ -67,14 +119,108 @@ export class SupplierService {
       otp.code = code;
       otp.expires_in = expiresIn;
     } else {
-      otp = this.supplierOTPRepository.create({
+      otp = this.supplierOtpRepository.create({
         code,
         expires_in: expiresIn,
         supplierId: supplier.id,
       });
     }
-    otp = await this.supplierOTPRepository.save(otp);
+    otp = await this.supplierOtpRepository.save(otp);
     supplier.otpId = otp.id;
     await this.supplierRepository.save(supplier);
+  }
+
+  makeTokens(payload: PayloadType) {
+    const accessToken = this.jwtService.sign(payload, {
+      secret: process.env.ACCESS_TOKEN_SECRET,
+      expiresIn: '30d',
+    });
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: process.env.REFRESH_TOKEN_SECRET,
+      expiresIn: '1y',
+    });
+    return {
+      accessToken,
+      refreshToken,
+    };
+  }
+  async validateAccessToken(token: string) {
+    try {
+      const payload = this.jwtService.verify<PayloadType>(token, {
+        secret: process.env.ACCESS_TOKEN_SECRET,
+      });
+      if (typeof payload === 'object' && payload?.id) {
+        const supplier = await this.supplierRepository.findOneBy({
+          id: payload.id,
+        });
+        if (!supplier) {
+          throw new UnauthorizedException('login on your account ');
+        }
+        return {
+          id: supplier.id,
+          first_name: supplier.manager_name,
+          last_name: supplier.manager_family,
+          mobile: supplier.phone,
+        };
+      }
+      throw new UnauthorizedException('login on your account ');
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      throw new UnauthorizedException('login on your account ');
+    }
+  }
+
+  async saveSupplementaryInformation(infoDto: SupplementaryInformationDto) {
+    const { id } = this.req.user;
+    const { email, national_code } = infoDto;
+    let supplier = await this.supplierRepository.findOneBy({ national_code });
+    if (supplier && supplier.id !== id) {
+      throw new ConflictException('national code already used');
+    }
+    supplier = await this.supplierRepository.findOneBy({ email });
+    if (supplier && supplier.id !== id) {
+      throw new ConflictException('email already used');
+    }
+    await this.supplierRepository.update(
+      { id },
+      {
+        email,
+        national_code,
+        status: SupplierStatus.SupplementaryInformation,
+      },
+    );
+    return {
+      message: 'updated information successfully',
+    };
+  }
+
+  async sendOtp(otpDto: SendOtpDto) {
+    const { mobile } = otpDto;
+    const supplier = await this.supplierRepository.findOneBy({ phone: mobile });
+    if (!supplier) {
+      throw new UnauthorizedException('not found account');
+    }
+    await this.createOtpForSupplier(supplier);
+    return {
+      message: 'sent code successfully',
+    };
+  }
+
+  async uploadDocuments(files: DocumentType) {
+    const { id } = this.req.user;
+    const { image, acceptedDoc } = files;
+    const supplier = await this.supplierRepository.findOneBy({ id });
+    const imageResult = await this.s3Service.uploadFile(image[0], 'images');
+    const docsResult = await this.s3Service.uploadFile(
+      acceptedDoc[0],
+      'acceptedDoc',
+    );
+    if (imageResult) supplier.image = imageResult.Location;
+    if (docsResult) supplier.document = docsResult.Location;
+    supplier.status = SupplierStatus.UploadedDocument;
+    await this.supplierRepository.save(supplier);
+    return {
+      message: 'success',
+    };
   }
 }
