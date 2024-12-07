@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { UserAddressEntity } from './address.entity';
 import { OTPEntity } from './otp.entity';
+import { FeedbackEntity } from 'src/modules/menu/entities/feedback.entity';
 
 @Entity(EntityNames.User)
 export class UserEntity {
@@ -36,6 +37,8 @@ export class UserEntity {
   created_at: Date;
   @UpdateDateColumn()
   updated_at: Date;
+  @OneToMany(() => FeedbackEntity, (feedback) => feedback.user)
+  feedbacks: FeedbackEntity[];
   @Column({ nullable: true })
   otpId: number;
   @OneToOne(() => OTPEntity, (otp) => otp.user)

@@ -144,6 +144,7 @@ export class SupplierService {
       refreshToken,
     };
   }
+
   async validateAccessToken(token: string) {
     try {
       const payload = this.jwtService.verify<PayloadType>(token, {

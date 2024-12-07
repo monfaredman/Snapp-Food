@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { CategoryModule } from '../category/category.module';
 import { AuthModule } from '../auth/auth.module';
 import { SupplierModule } from '../supplier/supplier.module';
+import { MenuModule } from '../menu/menu.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { SupplierModule } from '../supplier/supplier.module';
     AuthModule,
     CategoryModule,
     SupplierModule,
+    MenuModule,
   ],
   controllers: [AppController],
   providers: [AppService],
