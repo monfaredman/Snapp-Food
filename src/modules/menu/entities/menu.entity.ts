@@ -9,6 +9,7 @@ import {
 import { FeedbackEntity } from './feedback.entity';
 import { SupplierEntity } from 'src/modules/supplier/entities/supplier.entity';
 import { TypeEntity } from './type.entity';
+import { UserBasketEntity } from 'src/modules/basket/entities/basket.entity';
 
 @Entity(EntityNames.Menu)
 export class MenuEntity {
@@ -44,4 +45,6 @@ export class MenuEntity {
   type: TypeEntity;
   @OneToMany(() => FeedbackEntity, (feedback) => feedback.food)
   feedbacks: FeedbackEntity[];
+  @OneToMany(() => UserBasketEntity, (basket) => basket.food)
+  baskets: UserBasketEntity[];
 }

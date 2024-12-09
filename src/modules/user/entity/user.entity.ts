@@ -12,10 +12,11 @@ import {
 import { UserAddressEntity } from './address.entity';
 import { OTPEntity } from './otp.entity';
 import { FeedbackEntity } from 'src/modules/menu/entities/feedback.entity';
+import { UserBasketEntity } from 'src/modules/basket/entities/basket.entity';
 
 @Entity(EntityNames.User)
 export class UserEntity {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn('increment')
   id: number;
   @Column({ nullable: true })
   first_name: string;
@@ -37,15 +38,15 @@ export class UserEntity {
   created_at: Date;
   @UpdateDateColumn()
   updated_at: Date;
+  @OneToMany(() => UserAddressEntity, (address) => address.user)
+  addressList: UserAddressEntity[];
   @OneToMany(() => FeedbackEntity, (feedback) => feedback.user)
   feedbacks: FeedbackEntity[];
+  @OneToMany(() => UserBasketEntity, (basket) => basket.user)
+  basket: UserBasketEntity[];
   @Column({ nullable: true })
   otpId: number;
   @OneToOne(() => OTPEntity, (otp) => otp.user)
   @JoinColumn()
   otp: OTPEntity;
-  @OneToMany(() => UserAddressEntity, (address) => address.user, {
-    onDelete: 'CASCADE',
-  })
-  addressList: UserAddressEntity[];
 }
