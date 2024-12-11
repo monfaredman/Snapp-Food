@@ -13,6 +13,8 @@ import { UserAddressEntity } from './address.entity';
 import { OTPEntity } from './otp.entity';
 import { FeedbackEntity } from 'src/modules/menu/entities/feedback.entity';
 import { UserBasketEntity } from 'src/modules/basket/entities/basket.entity';
+import { OrderEntity } from 'src/modules/order/entities/order.entity';
+import { PaymentEntity } from 'src/modules/payment/entities/payment.entity';
 
 @Entity(EntityNames.User)
 export class UserEntity {
@@ -49,4 +51,8 @@ export class UserEntity {
   @OneToOne(() => OTPEntity, (otp) => otp.user)
   @JoinColumn()
   otp: OTPEntity;
+  @OneToMany(() => OrderEntity, (order) => order.address)
+  orders: OrderEntity[];
+  @OneToMany(() => PaymentEntity, (payment) => payment.user)
+  payments: PaymentEntity[];
 }

@@ -1,5 +1,5 @@
 import { EntityNames } from 'src/common/enum/entity-name.enum';
-import { UserEntity } from 'src/modules/user/entity/user.entity';
+import { UserEntity } from 'src/modules/user/entities/user.entity';
 import {
   Column,
   CreateDateColumn,

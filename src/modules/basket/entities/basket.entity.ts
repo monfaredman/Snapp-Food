@@ -1,7 +1,7 @@
 import { EntityNames } from 'src/common/enum/entity-name.enum';
 import { DiscountEntity } from 'src/modules/discount/entities/discount.entity';
 import { MenuEntity } from 'src/modules/menu/entities/menu.entity';
-import { UserEntity } from 'src/modules/user/entity/user.entity';
+import { UserEntity } from 'src/modules/user/entities/user.entity';
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity(EntityNames.UserBasket)
