@@ -38,7 +38,7 @@ export class PaymentService {
       userId,
       invoice_number: new Date().getTime().toString(),
     });
-    if (payment.status) {
+    if (!payment.status) {
       const { authority, code, gatewayURL } =
         await this.zarinpalService.sendRequest({
           amount: basket.payment_amount,
@@ -77,9 +77,11 @@ export class PaymentService {
       await this.orderService.save(order);
       payment.status = true;
     } else {
-      return 'http://frontendurl.com/payment?status=failed';
+      // return 'http://frontendurl.com/payment?status=failed';
+      return 'http://localhost:3000/swagger/payment?status=failed';
     }
     await this.paymentRepository.save(payment);
-    return 'http://frontendurl.com/payment?status=success';
+    // return 'http://frontendurl.com/payment?status=success';
+    return 'http://localhost:3000/swagger/payment?status=failed';
   }
 }

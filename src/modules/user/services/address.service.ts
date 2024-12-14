@@ -10,7 +10,7 @@ import {
   Scope,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeepPartial, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { UserAddressEntity } from '../entities/address.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import {

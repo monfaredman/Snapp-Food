@@ -38,7 +38,7 @@ export class ZarinpalService {
       return {
         code,
         authority,
-        gatewayURL: `${process.env.ZARINPAL_GATEWAY_URL}/${authority}`,
+        gatewayURL: `${process.env.ZARINPAL_GATEWAY_URL}${authority}`,
       };
     }
     throw new BadRequestException('connection faild in zarinpal');
